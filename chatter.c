@@ -6,10 +6,12 @@
 
 #define TYPE_SIZE 4
 #define ADDR_WIDTH 10
+char NULLTERM = '\0';
 
 
 void printUsernames(WINDOW* convWindow) {
     mvwprintw(convWindow, 0, 0, "Usernames\nGo\nHere!!"); // https://linux.die.net/man/3/mvprintw
+    wrefresh(convWindow);
 }
 
 
@@ -27,6 +29,9 @@ int main(int argc, char *argv[]) {
     WINDOW* convWindow  = newwin(H - TYPE_SIZE, ADDR_WIDTH, 0, W-ADDR_WIDTH);
     printUsernames(convWindow);
 
+    mvwprintw(chatsWindow, 0, 0, "Hello!!!!!!!!");
+    wrefresh(chatsWindow);
+
     // Step 2: Do input loop
     ArrayListBuf buf;
     while (1) {
@@ -43,7 +48,9 @@ int main(int argc, char *argv[]) {
                 // TODO: Move down in current conversations
             }
             else if (ch == KEY_BACKSPACE || ch == KEY_DC || ch == 127) {
+                // Handle deletes in the buffer
                 if (buf.N > 0) {
+                    buf.buff[buf.N-1] = '\0';
                     buf.N--;
                 }
             }
@@ -59,14 +66,18 @@ int main(int argc, char *argv[]) {
         while (ch != '\n');
 
         // TODO: Parse input and send message to currently selected client
+        ArrayListBuf_push(&buf, &NULLTERM, 1);
         char* input = buf.buff;
+        wclear(chatsWindow);
         mvwprintw(chatsWindow, 0, 0, "%s", input);
-
+        wrefresh(chatsWindow);
 
         ArrayListBuf_free(&buf);
     }
     
 
-
+    delwin(chatsWindow);
+    delwin(inputWindow);
+    delwin(convWindow);
     endwin();
 }
