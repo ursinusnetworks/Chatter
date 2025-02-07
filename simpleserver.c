@@ -68,9 +68,10 @@ int main(int argc, char** argv) {
 
         char* WELCOME_MSG = "Hello!  Thank you for your message!\n";
         int WELCOME_MSG_LEN = strlen(WELCOME_MSG);
-        int bytesSent = send(sockfd, WELCOME_MSG, WELCOME_MSG_LEN, 0);
+        int bytesSent = send(clientsockfd, WELCOME_MSG, WELCOME_MSG_LEN, 0);
         printf("%i bytes sent (tried to send %i)\n", bytesSent, WELCOME_MSG_LEN);
 
+        close(clientsockfd);
         close(sockfd);
     }
 }
