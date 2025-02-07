@@ -2,7 +2,6 @@
 #include <unistd.h>
 #include "linkedlist.h"
 #include "hashmap.h"
-#include "util.h"
 #include "arraylist.h"
 
 #define TYPE_SIZE 4
@@ -59,7 +58,7 @@ int main(int argc, char *argv[]) {
         }
         while (ch != '\n');
 
-        // TODO: Send message to currently selected client
+        // TODO: Parse input and send message to currently selected client
         char* input = buf.buff;
         mvwprintw(chatsWindow, 0, 0, "%s", input);
 
