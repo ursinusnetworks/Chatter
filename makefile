@@ -7,7 +7,7 @@ hashmap.o: hashmap.c hashmap.h
 	gcc -c hashmap.c
 
 chatter: chatter.c
-	gcc -o chatter chatter.c -lncurses
+	gcc -g -Wall -pedantic -o chatter chatter.c -lncurses
 
 simpleclient: simpleclient.c
 	$(CC) $(CFLAGS) -o simpleclient simpleclient.c

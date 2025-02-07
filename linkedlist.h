@@ -33,7 +33,6 @@ void LinkedList_free(struct LinkedList* list) {
 
 void LinkedList_addFirst(struct LinkedList* list, void* data) {
     struct Node* newHead = (struct Node*)malloc(sizeof(struct Node));
-    struct Node* head = list->head;
     newHead->next = list->head;
     newHead->data = data;
     list->head = newHead;
