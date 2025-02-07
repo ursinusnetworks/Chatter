@@ -14,7 +14,7 @@ int main() {
 
     HashMap_print(map);
 
-    printf("%s\n", HashMap_get(map, "Chris"));
+    printf("%s\n", (char*)HashMap_get(map, "Chris"));
 
     HashMap_free(map);
 }

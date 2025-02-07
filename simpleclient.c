@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     printf("%i bytes sent (tried to send %i)\n", bytesSent, len);
     
     char payload[MAGIC_BUFLEN];
-    size_t receivedBytes = recv(sockfd, payload, MAGIC_BUFLEN,0);
+    int receivedBytes = recv(sockfd, payload, MAGIC_BUFLEN,0);
     printf("Message received: %s\n", payload);
     printf("receviedBytes = %i\n", receivedBytes);
 
