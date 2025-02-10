@@ -8,6 +8,13 @@
 #define ADDR_WIDTH 10
 char NULLTERM = '\0';
 
+struct header_generic {
+    uint8_t magic;
+    uint8_t short1;
+    uint32_t int1;
+    uint32_t int2;
+};
+
 
 void printUsernames(WINDOW* convWindow) {
     mvwprintw(convWindow, 0, 0, "Usernames\nGo\nHere!!"); // https://linux.die.net/man/3/mvprintw
