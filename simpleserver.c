@@ -6,16 +6,41 @@
 #include <netdb.h>
 #include <errno.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #define RECV_BUFSIZE 65536
 #define BACKLOG 10
 
+struct __attribute__((__packed__)) header {
+    int magicNumber;
+    int length;
+};
+
+struct threadArgs {
+    int clientsockfd;
+};
+
+void* serviceClient(void* pargs) {
+    struct threadArgs* args = (struct threadArgs*)pargs;
+    struct header header;
+    int clientsockfd = args->clientsockfd;
+    recv(clientsockfd, &header, sizeof(struct header), 0);
+    header.length = ntohl(header.length);
+    header.magicNumber = ntohl(header.magicNumber);
+    char* msg = (char*)malloc(header.length);
+    recv(clientsockfd, msg, header.length, 0);
+    printf("Magic number: %i, Message: %s\n", header.magicNumber, msg);
+    free(msg);
+    fflush(stdout);
+    close(clientsockfd); // Close/clean up socket
+
+    pthread_exit(NULL); // Clean up thread
+}
 
 int main(int argc, char** argv) {
     // Step 1: Parse Parameters and initialize variables
     struct addrinfo hints;
     struct addrinfo* info;
-    char miniBuff[RECV_BUFSIZE];
     char* port = "60000";
 
     // Step 2: Find address information of domain and attempt to open socket
@@ -36,12 +61,12 @@ int main(int argc, char** argv) {
         }
         int yes = 1;
         if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-            fprintf(stderr, "Error setting socket options\n");
-            exit(1);
+            fprintf(stderr, "Error number %i setting socket options\n", errno);
+            exit(errno);
         }
         else if (bind(sockfd, node->ai_addr, node->ai_addrlen) == -1) {
-            fprintf(stderr, "Error binding socket\n");
-            exit(1);
+            fprintf(stderr, "Error number %i binding socket\n", errno);
+            exit(errno);
         }
     }
     freeaddrinfo(info);
@@ -49,29 +74,31 @@ int main(int argc, char** argv) {
     // Step 3: Service requests (single threaded for now)
     if (sockfd == -1 || node == NULL) {
         printf("ERROR: Error number %i on opening socket\n", errno);
+        exit(errno);
     }
-    else {
-        printf("Finished binding. Waiting for connections, sockfd = %i...\n", sockfd);
-        if (listen(sockfd, BACKLOG) == -1) {
-            fprintf(stderr, "Error listening\n");
-        }
-        
+
+    printf("Finished binding. Waiting for connections, sockfd = %i...\n", sockfd);
+    if (listen(sockfd, BACKLOG) == -1) {
+        fprintf(stderr, "Error number %i listening\n", errno);
+        exit(errno);
+    }
+    
+    while (1) {
         struct sockaddr_storage their_addr;
-        socklen_t len = sizeof their_addr;
-        int clientsockfd = accept(sockfd, (struct sockaddr*)&their_addr, &len);
+        socklen_t len = sizeof(their_addr);
+        struct threadArgs args;
+        args.clientsockfd = accept(sockfd, (struct sockaddr*)&their_addr, &len);
+        pthread_t thread;
         printf("Got a connection!  Servicing now...\n");
         fflush(stdout);
-
-        recv(clientsockfd, miniBuff, RECV_BUFSIZE, 0);
-        printf("Received: %s\n", miniBuff);
-        fflush(stdout);
-
-        char* WELCOME_MSG = "Hello!  Thank you for your message!\n";
-        int WELCOME_MSG_LEN = strlen(WELCOME_MSG);
-        int bytesSent = send(clientsockfd, WELCOME_MSG, WELCOME_MSG_LEN, 0);
-        printf("%i bytes sent (tried to send %i)\n", bytesSent, WELCOME_MSG_LEN);
-
-        close(clientsockfd);
-        close(sockfd);
+        int res = pthread_create(&thread, NULL, serviceClient, (void*)&args);
+        if (res == -1) {
+            fprintf(stderr, "Error %i creating thread", errno);
+            exit(errno);
+        }
     }
+
+
+
+    close(sockfd);
 }
