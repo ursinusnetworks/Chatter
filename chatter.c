@@ -8,7 +8,7 @@
 #define ADDR_WIDTH 10
 char NULLTERM = '\0';
 
-struct header_generic {
+struct __attribute__((__packed__))  header_generic {
     uint8_t magic;
     uint8_t short1;
     uint32_t int1;
