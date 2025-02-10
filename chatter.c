@@ -10,7 +10,7 @@ char NULLTERM = '\0';
 
 struct __attribute__((__packed__))  header_generic {
     uint8_t magic;
-    uint8_t short1;
+    uint16_t short1;
     uint32_t int1;
     uint32_t int2;
 };
