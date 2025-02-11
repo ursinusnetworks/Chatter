@@ -44,69 +44,80 @@ void reprintChatWindow(struct GUI* gui) {
 //             Chat Session Actions
 ///////////////////////////////////////////////////////////
 
+/**
+ * @brief Establish a chat with an IP address
+ * 
+ * @param chatter Data about the current chat session
+ * @param IP IP address in human readable form
+ */
+void connect(struct Chatter* chatter, char* IP) {
+    // TODO: Tralie
+    
+}
 
 /**
- * @brief Incorporate something that the user typed into
- * the chat session
+ * @brief Send a message in the active chat
  * 
- * @param chatter Chat session object
- * @param input String that the user just inputted
+ * @param chatter Data about the current chat session
+ * @param message 
  */
-void parseInput(struct Chatter* chatter, char* input) {
-    struct GUI* gui = chatter->gui;
-    // "connect <IP>"
-    if (strncmp(input, "connect", strlen("connect")) == 0) {
-        // Connect and start a conversation with a particular IP address
-        char IP[40];
-        sscanf(input, "connect %s", IP);
-
-
-    }
-    else if (strncmp(input, "myname", strlen("myname")) == 0) {
-        // Change my name
-        sscanf(input, "myname %65535s", chatter->myname);
-    }
-    else if (strncmp(input, "sendfile", strlen("sendfile")) == 0) {
-        // Send the following file message in the active conversation
-        char filename[65536];
-        sscanf(input, "sendfile %s", filename);
-
-    }
-    else if (strncmp(input, "send", strlen("send")) == 0) {
-        // Send the following text message in the active conversation
-        char* message = input + strlen("send") + 1;
-
-    }
-    else if (strncmp(input, "delete", strlen("delete")) == 0) {
-        // Delete the message with this id in the active conversation
-        uint16_t id;
-        sscanf(input, "delete %hu", &id);
-        
-
-    }
-    else if (strncmp(input, "close", strlen("close")) == 0) {
-        // Close the connection with someone
-        char name[65536];
-        sscanf(input, "close %65535s", name);
-
-
-    }
-    else if (strncmp(input, "talkto", strlen("talkto")) == 0) {
-        // Switch the active chat window to someone else
-        sscanf(input, "talkto %65535s", chatter->activename);
-        
-
-    }
-    else {
-        wclear(gui->chatsWindow);
-        char command[65536];
-        sscanf(input, "%65535s", command);
-        mvwprintw(gui->chatsWindow, 0, 0, "Unrecognized command %s;  (use connect, myname, send, sendfile, delete, close, talkto)", command);
-        wrefresh(gui->chatsWindow);
-    }
-    reprintUsernameWindow(gui);
-    reprintChatWindow(gui);
+void sendMessage(struct Chatter* chatter, char* message) {
+    
 }
+
+/**
+ * @brief Delete message in the active chat
+ * 
+ * @param chatter Data about the current chat session
+ * @param id ID of message to delete
+ */
+void deleteMessage(struct Chatter* chatter, uint16_t id) {
+
+}
+
+/**
+ * @brief Send a file in the active chat
+ * 
+ * @param chatter Data about the current chat session
+ * @param filename Path to file
+ */
+void sendFile(struct Chatter* chatter, char* filename) {
+
+}
+
+/**
+ * @brief Broadcast my name to all active connections
+ * NOTE: Name is held in chatter->myname
+ * 
+ * @param chatter Data about the current chat session
+ */
+void broadcastMyName(struct Chatter* chatter) {
+
+}
+
+/**
+ * @brief Switch the active chat
+ * 
+ * @param chatter Data about the current chat session
+ * @param name Switch chat to be with this person
+ */
+void switchTo(struct Chatter* chatter, char* name) {
+    // TODO: Tralie
+}
+
+/**
+ * @brief Close chat with someone
+ * 
+ * @param chatter Data about the current chat session
+ * @param name Close connection with this person
+ */
+void closeChat(struct Chatter* chatter, char* name) {
+
+}
+
+
+
+
 
 
 

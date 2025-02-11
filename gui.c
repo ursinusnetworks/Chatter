@@ -6,6 +6,7 @@
 #include "arraylist.h"
 #include <ncurses.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define TYPE_SIZE 4
 #define ADDR_WIDTH 10
@@ -38,6 +39,65 @@ void destroyGUI(struct GUI* gui) {
     delwin(gui->convWindow);
     endwin();
     free(gui);
+}
+
+/**
+ * @brief Incorporate something that the user typed into
+ * the chat session
+ * 
+ * @param chatter Chat session object
+ * @param input String that the user just inputted
+ */
+void parseInput(struct Chatter* chatter, char* input) {
+    struct GUI* gui = chatter->gui;
+    // "connect <IP>"
+    if (strncmp(input, "connect", strlen("connect")) == 0) {
+        // Connect and start a conversation with a particular IP address
+        char IP[40];
+        sscanf(input, "connect %s", IP);
+        connect(chatter, IP);
+    }
+    else if (strncmp(input, "myname", strlen("myname")) == 0) {
+        // Change my name
+        sscanf(input, "myname %65535s", chatter->myname);
+        broadcastMyName(chatter);
+    }
+    else if (strncmp(input, "sendfile", strlen("sendfile")) == 0) {
+        // Send the following file message in the active conversation
+        char filename[65536];
+        sscanf(input, "sendfile %s", filename);
+        sendFile(chatter, filename);
+    }
+    else if (strncmp(input, "send", strlen("send")) == 0) {
+        // Send the following text message in the active conversation
+        char* message = input + strlen("send") + 1;
+        sendMessage(chatter, message);
+    }
+    else if (strncmp(input, "delete", strlen("delete")) == 0) {
+        // Delete the message with this id in the active conversation
+        uint16_t id;
+        sscanf(input, "delete %hu", &id);
+        deleteMessage(chatter, id);
+    }
+    else if (strncmp(input, "close", strlen("close")) == 0) {
+        // Close the connection with someone
+        char name[65536];
+        sscanf(input, "close %65535s", name);
+        closeChat(chatter, name);
+    }
+    else if (strncmp(input, "talkto", strlen("talkto")) == 0) {
+        // Switch the active chat window to someone else
+        char name[65536];
+        sscanf(input, "talkto %65535s", name);
+        switchTo(chatter, name);
+    }
+    else {
+        wclear(gui->chatsWindow);
+        char command[65536];
+        sscanf(input, "%65535s", command);
+        mvwprintw(gui->chatsWindow, 0, 0, "Unrecognized command %s;  (use connect, myname, send, sendfile, delete, close, talkto)", command);
+        wrefresh(gui->chatsWindow);
+    }
 }
 
 void typeLoop(struct Chatter* chatter) {
