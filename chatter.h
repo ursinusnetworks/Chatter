@@ -11,13 +11,21 @@ struct __attribute__((__packed__))  header_generic {
 
 struct GUI {
     int W, H; // Width, height of terminal
+    int CH; // Chat height
     WINDOW* chatsWindow;
     WINDOW* inputWindow;
     WINDOW* convWindow;
 };
 
+struct Chat {
+    int sockfd;
+    char name[65536];
+};
+
 struct Chatter {
     struct GUI* gui;
+    char myname[65536];
+    char activename[65536]; // Name of the active chat
 };
 
 struct GUI* initGUI();

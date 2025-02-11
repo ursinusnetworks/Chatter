@@ -1,3 +1,7 @@
+// Programmer: Chris Tralie
+// Purpose: To provide a simple 3 window interface where
+// users can type commands and manage chats
+
 #include "chatter.h"
 #include "arraylist.h"
 #include <ncurses.h>
@@ -8,20 +12,22 @@
 char NULLTERM = '\0';
 
 struct GUI* initGUI() {
-    // Step 1: Setup 3 windows
+    // Setup 3 windows
     initscr();
     noecho();
     keypad(stdscr, TRUE);
     struct GUI* gui = (struct GUI*)malloc(sizeof(struct GUI));
     getmaxyx(stdscr, gui->H, gui->W);
+    gui->CH = gui->H - TYPE_SIZE;
     curs_set(TRUE);
-    gui->chatsWindow = newwin(gui->H - TYPE_SIZE, gui->W-ADDR_WIDTH, 0, 0);
-    gui->inputWindow = newwin(TYPE_SIZE, gui->W, gui->H-TYPE_SIZE, 0);
-    gui->convWindow  = newwin(gui->H - TYPE_SIZE, ADDR_WIDTH, 0, gui->W-ADDR_WIDTH);
+    gui->chatsWindow = newwin(gui->CH, gui->W-ADDR_WIDTH, 0, 0);
+    gui->inputWindow = newwin(TYPE_SIZE, gui->W, gui->CH, 0);
+    gui->convWindow  = newwin(gui->CH, ADDR_WIDTH, 0, gui->W-ADDR_WIDTH);
 
-    mvwprintw(gui->chatsWindow, 0, 0, "Hello!!!!!!!!"); // https://linux.die.net/man/3/mvprintw
+    char* s = "Hello!  Chats will go here!";
+    mvwprintw(gui->chatsWindow, 0, 0, "%s", s); 
     wrefresh(gui->chatsWindow);
-    mvwprintw(gui->convWindow, 0, 0, "Usernames\nGo\nHere!!"); 
+    mvwprintw(gui->convWindow, 0, 0, "Usernames\nGo\nHere!"); 
     wrefresh(gui->convWindow);
     return gui;
 }
@@ -67,8 +73,6 @@ void typeLoop(struct Chatter* chatter) {
             }
         }
         while (ch != '\n');
-
-        // TODO: Parse input and send message to currently selected client
         ArrayListBuf_push(&buf, &NULLTERM, 1);
         char* input = buf.buff;
         parseInput(chatter, input);
