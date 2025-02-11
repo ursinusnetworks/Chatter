@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <ncurses.h>
+#include "linkedlist.h"
+#include "hashmap.h"
 
 struct __attribute__((__packed__))  header_generic {
     uint8_t magic;
@@ -17,19 +19,29 @@ struct GUI {
     WINDOW* convWindow;
 };
 
+struct Message {
+    int id;
+    char* message;
+};
+
 struct Chat {
     int sockfd;
     char name[65536];
+    struct LinkedList* messages;
 };
 
 struct Chatter {
     struct GUI* gui;
+    struct LinkedList* chats;
+    struct HashMap* name2sock; // Convert from a name to a socket ID
     char myname[65536];
-    char activename[65536]; // Name of the active chat
+    int sockactive; // File descriptor for the active chat
+    int serversock; // File descriptor for the socket listening for incoming connections
 };
 
 struct GUI* initGUI();
 void destroyGUI(struct GUI* gui);
+void printErrorGUI(struct GUI* gui, char* error);
 void reprintUsernameWindow(struct GUI* gui);
 void reprintChatWindow(struct GUI* gui);
 void typeLoop(struct Chatter* chatter);
@@ -38,13 +50,18 @@ struct Chatter* initChatter();
 void destroyChatter(struct Chatter* chatter);
 
 
+////////////////////////////////////////////////////////////////////
+//                    OUTGOING ACTIONS                            //
+////////////////////////////////////////////////////////////////////
+
 /**
  * @brief Establish a chat with an IP address
  * 
  * @param chatter Data about the current chat session
  * @param IP IP address in human readable form
+ * @param port Port on which to establish connection
  */
-void connect(struct Chatter* chatter, char* IP);
+void connectChat(struct Chatter* chatter, char* IP, char* port);
 
 /**
  * @brief Send a message in the active chat
@@ -79,6 +96,15 @@ void sendFile(struct Chatter* chatter, char* filename);
 void broadcastMyName(struct Chatter* chatter);
 
 /**
+ * @brief Close chat with someone
+ * 
+ * @param chatter Data about the current chat session
+ * @param name Close connection with this person
+ */
+void closeChat(struct Chatter* chatter, char* name);
+
+
+/**
  * @brief Switch the active chat
  * 
  * @param chatter Data about the current chat session
@@ -86,13 +112,12 @@ void broadcastMyName(struct Chatter* chatter);
  */
 void switchTo(struct Chatter* chatter, char* name);
 
-/**
- * @brief Close chat with someone
- * 
- * @param chatter Data about the current chat session
- * @param name Close connection with this person
- */
-void closeChat(struct Chatter* chatter, char* name);
+
+
+////////////////////////////////////////////////////////////////////
+//                    INCOMING ACTIONS                            //
+////////////////////////////////////////////////////////////////////
+
 
 
 #endif

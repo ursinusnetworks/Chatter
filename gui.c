@@ -41,6 +41,12 @@ void destroyGUI(struct GUI* gui) {
     free(gui);
 }
 
+void printErrorGUI(struct GUI* gui, char* error) {
+    wclear(gui->chatsWindow);
+    mvwprintw(gui->chatsWindow, 0, 0, "%s", error);
+    wrefresh(gui->chatsWindow);
+}
+
 /**
  * @brief Incorporate something that the user typed into
  * the chat session
@@ -48,14 +54,16 @@ void destroyGUI(struct GUI* gui) {
  * @param chatter Chat session object
  * @param input String that the user just inputted
  */
-void parseInput(struct Chatter* chatter, char* input) {
+int parseInput(struct Chatter* chatter, char* input) {
+    int finished = 0;
     struct GUI* gui = chatter->gui;
     // "connect <IP>"
     if (strncmp(input, "connect", strlen("connect")) == 0) {
         // Connect and start a conversation with a particular IP address
         char IP[40];
-        sscanf(input, "connect %s", IP);
-        connect(chatter, IP);
+        char port[6];
+        sscanf(input, "connect %39s %5s", IP, port);
+        connectChat(chatter, IP, port);
     }
     else if (strncmp(input, "myname", strlen("myname")) == 0) {
         // Change my name
@@ -73,6 +81,12 @@ void parseInput(struct Chatter* chatter, char* input) {
         char* message = input + strlen("send") + 1;
         sendMessage(chatter, message);
     }
+    else if (strncmp(input, "talkto", strlen("talkto")) == 0) {
+        // Switch the active chat window to someone else
+        char name[65536];
+        sscanf(input, "talkto %65535s", name);
+        switchTo(chatter, name);
+    }
     else if (strncmp(input, "delete", strlen("delete")) == 0) {
         // Delete the message with this id in the active conversation
         uint16_t id;
@@ -85,25 +99,26 @@ void parseInput(struct Chatter* chatter, char* input) {
         sscanf(input, "close %65535s", name);
         closeChat(chatter, name);
     }
-    else if (strncmp(input, "talkto", strlen("talkto")) == 0) {
-        // Switch the active chat window to someone else
-        char name[65536];
-        sscanf(input, "talkto %65535s", name);
-        switchTo(chatter, name);
+    else if (strncmp(input, "exit", strlen("exit")) == 0) {
+        finished = 1;
     }
     else {
-        wclear(gui->chatsWindow);
+        char* fmt = "Unrecognized command %s;  (use connect, myname, send, sendfile, delete, close, talkto, exit)";
         char command[65536];
         sscanf(input, "%65535s", command);
-        mvwprintw(gui->chatsWindow, 0, 0, "Unrecognized command %s;  (use connect, myname, send, sendfile, delete, close, talkto)", command);
-        wrefresh(gui->chatsWindow);
+        char* error = (char*)malloc(strlen(fmt) + strlen(command) + 1);
+        sprintf(error, fmt, command);
+        printErrorGUI(gui, error);
+        free(error);
     }
+    return finished;
 }
 
 void typeLoop(struct Chatter* chatter) {
     struct GUI* gui = chatter->gui;
     ArrayListBuf buf;
-    while (1) {
+    int finished = 0;
+    while (finished == 0) {
         wclear(gui->inputWindow);
         // Input loop
         ArrayListBuf_init(&buf);
@@ -135,7 +150,7 @@ void typeLoop(struct Chatter* chatter) {
         while (ch != '\n');
         ArrayListBuf_push(&buf, &NULLTERM, 1);
         char* input = buf.buff;
-        parseInput(chatter, input);
+        finished = parseInput(chatter, input);
         ArrayListBuf_free(&buf);
     }
 }

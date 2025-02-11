@@ -16,7 +16,7 @@ gui.o: gui.c chatter.h
 	gcc -c gui.c
 
 chatter: chatter.c chatter.h gui.o arraylist.o linkedlist.o hashmap.o
-	gcc $(CFLAGS) -o chatter chatter.c gui.o arraylist.o -lncurses -lpthread
+	gcc $(CFLAGS) -o chatter chatter.c gui.o arraylist.o linkedlist.o hashmap.o -lncurses -lpthread
 
 simpleclient: simpleclient.c
 	$(CC) $(CFLAGS) -o simpleclient simpleclient.c
