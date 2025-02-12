@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-g -Wall -pedantic
 
-all: chatter simpleserver simpleclient test hashmaptest
+all: chatter simpleserver simpleclient test hashmaptest linkedlisttest
 
 arraylist.o: arraylist.c arraylist.h
 	gcc -c arraylist.c
@@ -30,5 +30,8 @@ test: test.c
 hashmaptest: hashmaptest.c hashmap.o
 	gcc -g -o hashmaptest hashmaptest.c hashmap.o
 
+linkedlisttest: linkedlisttest.c linkedlist.o
+	gcc -g -o linkedlisttest linkedlisttest.c linkedlist.o
+
 clean:
-	rm *.o chatter simpleserver simpleclient test hashmaptest 
+	rm *.o chatter simpleserver simpleclient test hashmaptest linkedlisttest
