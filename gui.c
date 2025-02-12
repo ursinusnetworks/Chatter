@@ -126,10 +126,10 @@ void typeLoop(struct Chatter* chatter) {
         do {
             ch = wgetch(gui->inputWindow);
             if (ch == KEY_UP) {
-                // TODO: Move up in current conversations
+                // TODO: Scroll up in current conversation
             }
             else if (ch == KEY_DOWN) {
-                // TODO: Move down in current conversations
+                // TODO: Scroll down in current conversation
             }
             else if (ch == KEY_BACKSPACE || ch == KEY_DC || ch == 127) {
                 // Handle deletes in the buffer

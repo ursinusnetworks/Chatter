@@ -18,27 +18,55 @@
 
 #define BACKLOG 20
 
+///////////////////////////////////////////////////////////
+//       Data Structure Memory Management
+///////////////////////////////////////////////////////////
+
+struct Chat* initChat(int sockfd) {
+    struct Chat* chat = (struct Chat*)malloc(sizeof(struct Chat));
+    chat->messagesIn = LinkedList_init();
+    chat->messagesOut = LinkedList_init();
+    chat->outCounter = 0;
+    chat->sockfd = sockfd;
+    return chat;
+}
+
+void destroyChat(struct Chat* chat) {
+    freeMessages(chat->messagesIn);
+    LinkedList_free(chat->messagesIn);
+    freeMessages(chat->messagesOut);
+    LinkedList_free(chat->messagesOut);
+    free(chat);
+}
+
+void freeMessages(struct LinkedList* messages) {
+    struct LinkedNode* node = messages->head;
+    while (node != NULL) {
+        struct Message* message = (struct Message*)node->data;
+        free(message->text);
+        free(message);
+        node = node->next;
+    }
+}
+
 struct Chatter* initChatter() {
     // Dynamically allocate all objects that need allocating
     struct Chatter* chatter = (struct Chatter*)malloc(sizeof(struct Chatter));
     chatter->gui = initGUI();
     strcpy(chatter->myname, "Anonymous");
     chatter->chats = LinkedList_init();
-
-
     return chatter;
 }
 
 void destroyChatter(struct Chatter* chatter) {
     destroyGUI(chatter->gui);
-    struct LinkedNode* chat = chatter->chats;
-    while (chat != NULL) {
-        free((struct Chat*)chat->data);
-        chat = chat->next;
+    struct LinkedNode* chatNode = chatter->chats->head;
+    while (chatNode != NULL) {
+        struct Chat* chat = (struct Chat*)chatNode->data;
+        destroyChat(chat);
+        chatNode = chatNode->next;
     }
     LinkedList_free(chatter->chats);
-    
-
     free(chatter);
 }
 
@@ -62,7 +90,7 @@ void reprintChatWindow(struct GUI* gui) {
 
 
 ///////////////////////////////////////////////////////////
-//             Chat Session Actions
+//             Chat Session Messages Out
 ///////////////////////////////////////////////////////////
 
 /**
@@ -139,6 +167,13 @@ void switchTo(struct Chatter* chatter, char* name) {
 }
 
 
+
+///////////////////////////////////////////////////////////
+//             Chat Session Messages In
+///////////////////////////////////////////////////////////
+
+
+
 ///////////////////////////////////////////////////////////
 //               Connection Management
 ///////////////////////////////////////////////////////////
@@ -164,13 +199,15 @@ void socketErrorAndExit(struct Chatter* chatter, char* fmt) {
  * 
  * @param pargs Pointer to the chatter data
  */
-void serverLoop(void* pargs) {
+void* serverLoop(void* pargs) {
     struct Chatter* chatter = (struct Chatter*)pargs;
     while (1) {
         struct sockaddr_storage their_addr;
         socklen_t len = sizeof(their_addr);
         int sockfd = accept(chatter->serversock, (struct sockaddr*)&their_addr, &len);
-        // TODO: Finish this
+        if (sockfd != -1) {
+            // Put an entry 
+        }
     }
 }
 
@@ -220,7 +257,11 @@ int main(int argc, char *argv[]) {
     }
     pthread_t serverThread;
     int res = pthread_create(&serverThread, NULL, serverLoop, (void*)chatter);
-
+    if (res != 0) {
+        socketErrorAndExit(chatter, "Error number %i creating server thread\n");
+        destroyChatter(chatter);
+        exit(res);
+    }
 
     // Step 2: Begin the input loop on the client side
     typeLoop(chatter);

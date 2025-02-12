@@ -18,36 +18,43 @@ struct GUI {
     WINDOW* inputWindow;
     WINDOW* convWindow;
 };
+struct GUI* initGUI();
+void destroyGUI(struct GUI* gui);
+void printErrorGUI(struct GUI* gui, char* error);
+
 
 struct Message {
     int id;
-    char* message;
+    char* text;
 };
+void freeMessages(struct LinkedList* messages);
 
 struct Chat {
-    int sockfd;
-    char name[65536];
-    struct LinkedList* messages;
+    char name[65536]; // Name of the person we're talking to
+    int sockfd; // Socket associated to this chat
+    int outCounter; // How many messages sent out on this chat
+    struct LinkedList* messagesIn;
+    struct LinkedList* messagesOut;
 };
+struct Chat* initChat(int sockfd);
+void destroyChat(struct Chat* chat);
 
 struct Chatter {
     struct GUI* gui;
     struct LinkedList* chats;
-    struct HashMap* name2sock; // Convert from a name to a socket ID
     char myname[65536];
     int sockactive; // File descriptor for the active chat
     int serversock; // File descriptor for the socket listening for incoming connections
 };
+struct Chatter* initChatter();
+void destroyChatter(struct Chatter* chatter);
 
-struct GUI* initGUI();
-void destroyGUI(struct GUI* gui);
-void printErrorGUI(struct GUI* gui, char* error);
+
 void reprintUsernameWindow(struct GUI* gui);
 void reprintChatWindow(struct GUI* gui);
 void typeLoop(struct Chatter* chatter);
 
-struct Chatter* initChatter();
-void destroyChatter(struct Chatter* chatter);
+
 
 
 ////////////////////////////////////////////////////////////////////
