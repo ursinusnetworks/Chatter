@@ -54,8 +54,8 @@ struct Chatter* initChatter();
 void destroyChatter(struct Chatter* chatter);
 struct Chat* getChatFromName(struct Chatter* chatter, char* name);
 
-void reprintUsernameWindow(struct Chatter* chatter);
-void reprintChatWindow(struct Chatter* chatter);
+void reprintUsernameWindow(struct Chatter* chatter); // NOTE: This method locks chat
+void reprintChatWindow(struct Chatter* chatter); // NOTE: This method locks chat
 void typeLoop(struct Chatter* chatter);
 
 
