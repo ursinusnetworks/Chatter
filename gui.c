@@ -20,31 +20,32 @@ struct GUI* initGUI() {
     struct GUI* gui = (struct GUI*)malloc(sizeof(struct GUI));
     getmaxyx(stdscr, gui->H, gui->W);
     gui->CH = gui->H - TYPE_SIZE;
+    gui->CW = gui->W - ADDR_WIDTH;
     curs_set(TRUE);
-    gui->chatsWindow = newwin(gui->CH, gui->W-ADDR_WIDTH, 0, 0);
+    gui->chatWindow = newwin(gui->CH, gui->CW, 0, 0);
     gui->inputWindow = newwin(TYPE_SIZE, gui->W, gui->CH, 0);
-    gui->convWindow  = newwin(gui->CH, ADDR_WIDTH, 0, gui->W-ADDR_WIDTH);
+    gui->nameWindow  = newwin(gui->CH, ADDR_WIDTH, 0, gui->CW);
 
     char* s = "Hello!  Chats will go here!";
-    mvwprintw(gui->chatsWindow, 0, 0, "%s", s); 
-    wrefresh(gui->chatsWindow);
-    mvwprintw(gui->convWindow, 0, 0, "Usernames\nGo\nHere!"); 
-    wrefresh(gui->convWindow);
+    mvwprintw(gui->chatWindow, 0, 0, "%s", s); 
+    wrefresh(gui->chatWindow);
+    mvwprintw(gui->nameWindow, 0, 0, "Usernames\nGo\nHere!"); 
+    wrefresh(gui->nameWindow);
     return gui;
 }
 
 void destroyGUI(struct GUI* gui) {
-    delwin(gui->chatsWindow);
+    delwin(gui->chatWindow);
     delwin(gui->inputWindow);
-    delwin(gui->convWindow);
+    delwin(gui->nameWindow);
     endwin();
     free(gui);
 }
 
 void printErrorGUI(struct GUI* gui, char* error) {
-    wclear(gui->chatsWindow);
-    mvwprintw(gui->chatsWindow, 0, 0, "%s", error);
-    wrefresh(gui->chatsWindow);
+    wclear(gui->chatWindow);
+    mvwprintw(gui->chatWindow, 0, 0, "%s", error);
+    wrefresh(gui->chatWindow);
 }
 
 /**
@@ -110,7 +111,10 @@ int parseInput(struct Chatter* chatter, char* input) {
         sprintf(error, fmt, command);
         printErrorGUI(gui, error);
         free(error);
+        return finished;
     }
+    reprintUsernameWindow(chatter);
+    reprintChatWindow(chatter);
     return finished;
 }
 
@@ -153,4 +157,88 @@ void typeLoop(struct Chatter* chatter) {
         finished = parseInput(chatter, input);
         ArrayListBuf_free(&buf);
     }
+}
+
+///////////////////////////////////////////////////////////
+//       GUI Update Methods
+//       See: https://linux.die.net/man/3/mvprintw
+///////////////////////////////////////////////////////////
+
+void reprintUsernameWindow(struct Chatter* chatter) {
+    pthread_mutex_lock(&chatter->lock);
+    struct GUI* gui = chatter->gui;
+    wclear(gui->nameWindow);
+    struct LinkedNode* node = chatter->chats->head;
+    int row = 0;
+    while (node != NULL && row < gui->CH) {
+        struct Chat* chat = (struct Chat*)node->data;
+        char special = ' ';
+        if (chat == chatter->activeChat) {
+            special = '*'; // Put an asterix next to the active chat
+        }
+        mvwprintw(gui->nameWindow, row, 0, "%s%c", chat->name, special);
+        row++;
+        node = node->next;
+    }
+    wrefresh(gui->nameWindow);
+    pthread_mutex_unlock(&chatter->lock);
+}
+
+void printLineToChat(struct GUI* gui, char* str, int len, int* row) {
+    int col = 0;
+    for (int i = 0; i < len; i++) {
+        mvwprintw(gui->chatWindow, *row, col, "%c", str[i]);
+        col++;
+        if (col == gui->W) {
+            col = 0;
+            (*row)--;
+        }
+    }
+}
+
+void reprintChatWindow(struct Chatter* chatter) {
+    pthread_mutex_lock(&chatter->lock);
+    struct GUI* gui = chatter->gui;
+    wclear(gui->chatWindow);
+    if (chatter->activeChat != NULL) {
+        struct Chat* chat = chatter->activeChat;
+        // Print out chats in order of most recent
+        int row = gui->CH - 1;
+        struct LinkedNode* inNode = chat->messagesIn->head;
+        struct LinkedNode* outNode = chat->messagesIn->head;
+        while (row >= 0 && (inNode != NULL || outNode != NULL)) {
+            int printOut = 0;
+            if (inNode == NULL) {
+                printOut = 1;
+            }
+            else if (outNode != NULL) {
+                struct Message* msgIn = (struct Message*)inNode->data;
+                struct Message* msgOut = (struct Message*)outNode->data;
+                if (msgOut->timestamp > msgIn->timestamp) {
+                    printOut = 1;
+                }
+            }
+            if (printOut == 1) {
+                // Print my message
+                struct Message* msg = (struct Message*)outNode->data;
+                char* str = (char*)malloc(strlen("Me : ") + strlen(msg->text) + 100);
+                sprintf(str, "Me %i: %s", msg->id, msg->text);
+                printLineToChat(gui, str, strlen(str), &row);
+                free(str);
+                outNode = outNode->next;
+            }
+            else {
+                // Print other message
+                struct Message* msg = (struct Message*)inNode->data;
+                char* str = (char*)malloc(strlen(chat->name) + strlen(msg->text) + 100);
+                sprintf(str, "%s %i: %s", chat->name, msg->id, msg->text);
+                printLineToChat(gui, str, strlen(str), &row);
+                free(str);
+                inNode = inNode->next;
+            }
+            row--;
+        }
+    }
+    pthread_mutex_unlock(&chatter->lock);
+    wrefresh(gui->chatWindow);
 }

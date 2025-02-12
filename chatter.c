@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <time.h>
 
 #include "linkedlist.h"
 #include "hashmap.h"
@@ -21,6 +22,11 @@
 ///////////////////////////////////////////////////////////
 //       Data Structure Memory Management
 ///////////////////////////////////////////////////////////
+
+struct ReceiveData {
+    struct Chatter* chatter;
+    struct Chat* chat;
+};
 
 struct Chat* initChat(int sockfd) {
     struct Chat* chat = (struct Chat*)malloc(sizeof(struct Chat));
@@ -55,6 +61,8 @@ struct Chatter* initChatter() {
     chatter->gui = initGUI();
     strcpy(chatter->myname, "Anonymous");
     chatter->chats = LinkedList_init();
+    chatter->activeChat = NULL;
+    pthread_mutex_init(&chatter->lock, NULL);
     return chatter;
 }
 
@@ -67,24 +75,65 @@ void destroyChatter(struct Chatter* chatter) {
         chatNode = chatNode->next;
     }
     LinkedList_free(chatter->chats);
+    pthread_mutex_destroy(&chatter->lock);
     free(chatter);
 }
 
-///////////////////////////////////////////////////////////
-//       GUI Update Methods
-//       See: https://linux.die.net/man/3/mvprintw
-///////////////////////////////////////////////////////////
-
-void reprintUsernameWindow(struct GUI* gui) {
-    wclear(gui->convWindow);
-    // TODO:  Tralie
-    wrefresh(gui->convWindow);
+/**
+ * @brief Get the first chat object in a list that corresponds
+ * to a name
+ * (NOTE: This could be done more efficiently with a hash table,
+ * but we'll used linked lists for now)
+ * 
+ * @param name String name
+ * @return struct Chat* 
+ */
+struct Chat* getChatFromName(struct Chatter* chatter, char* name) {
+    struct Chat* chat = NULL;
+    pthread_mutex_lock(&chatter->lock);
+    struct LinkedNode* node = chatter->chats->head;
+    int len = strlen(name);
+    while (node != NULL) {
+        struct Chat* thisChat = (struct Chat*)node->data;
+        if (strncmp(name, chat->name, len) == 0) {
+            chat = thisChat;
+            break;
+        }
+        node = node->next;
+    }
+    pthread_mutex_unlock(&chatter->lock);
+    return chat;
 }
 
-void reprintChatWindow(struct GUI* gui) {
-    wclear(gui->chatsWindow);
-    // TODO: Print stuff in the chat window
-    wrefresh(gui->chatsWindow);
+
+///////////////////////////////////////////////////////////
+//             Chat Session Messages In
+///////////////////////////////////////////////////////////
+
+/**
+ * @brief Continually loop and receive info
+ * 
+ * @param pargs 
+ * @return void* 
+ */
+void* receiveLoop(void* pargs) {
+    struct ReceiveData* param = (struct ReceiveData*)pargs;
+    struct Chat* chat = param->chat;
+    struct Chatter* chatter = param->chatter;
+    free(param);
+    while (1) {
+        struct header_generic header;
+        if (recv(chat->sockfd, &header, sizeof(struct header_generic), 0) == 0) {
+            break;
+        }
+        // TODO: Fill this in.  Cast the header as appropriate, and receive
+        // the rest of the data.  
+        // Be sure to lock variables as appropriate for thread safety
+
+        reprintUsernameWindow(chatter);
+        reprintChatWindow(chatter);
+    }
+    return NULL;
 }
 
 
@@ -93,17 +142,6 @@ void reprintChatWindow(struct GUI* gui) {
 //             Chat Session Messages Out
 ///////////////////////////////////////////////////////////
 
-/**
- * @brief Establish a chat with an IP address
- * 
- * @param chatter Data about the current chat session
- * @param IP IP address in human readable form
- * @param port Port on which to establish connection
- */
-void connectChat(struct Chatter* chatter, char* IP, char* port) {
-    // Step 1: Establish connection
-    
-}
 
 /**
  * @brief Send a message in the active chat
@@ -112,7 +150,7 @@ void connectChat(struct Chatter* chatter, char* IP, char* port) {
  * @param message 
  */
 void sendMessage(struct Chatter* chatter, char* message) {
-    
+    // TODO: Fill this in
 }
 
 /**
@@ -122,7 +160,7 @@ void sendMessage(struct Chatter* chatter, char* message) {
  * @param id ID of message to delete
  */
 void deleteMessage(struct Chatter* chatter, uint16_t id) {
-
+    // TODO: Fill this in
 }
 
 /**
@@ -132,7 +170,7 @@ void deleteMessage(struct Chatter* chatter, uint16_t id) {
  * @param filename Path to file
  */
 void sendFile(struct Chatter* chatter, char* filename) {
-
+    // TODO: Fill this in
 }
 
 /**
@@ -142,7 +180,7 @@ void sendFile(struct Chatter* chatter, char* filename) {
  * @param chatter Data about the current chat session
  */
 void broadcastMyName(struct Chatter* chatter) {
-
+    // TODO: Fill this in
 }
 
 /**
@@ -152,7 +190,7 @@ void broadcastMyName(struct Chatter* chatter) {
  * @param name Close connection with this person
  */
 void closeChat(struct Chatter* chatter, char* name) {
-
+    // TODO: Fill this in
 }
 
 
@@ -163,14 +201,14 @@ void closeChat(struct Chatter* chatter, char* name) {
  * @param name Switch chat to be with this person
  */
 void switchTo(struct Chatter* chatter, char* name) {
-    // TODO: Tralie
+    pthread_mutex_lock(&chatter->lock);
+    struct Chat* chat = getChatFromName(chatter, name);
+    if (chat != NULL) {
+        chatter->activeChat = chat;
+    }
+    pthread_mutex_unlock(&chatter->lock);
 }
 
-
-
-///////////////////////////////////////////////////////////
-//             Chat Session Messages In
-///////////////////////////////////////////////////////////
 
 
 
@@ -194,6 +232,97 @@ void socketErrorAndExit(struct Chatter* chatter, char* fmt) {
     exit(errno);
 }
 
+
+/**
+ * @brief Setup a chat on a socket, regardless of whether it came from
+ * a client or server
+ * 
+ * @param chatter Chatter object
+ * @param sockfd A socket that's already been connected to a stream
+ */
+void setupNewChat(struct Chatter* chatter, int sockfd) {
+    // Step 1: Setup a new chat object and add to the list
+    struct Chat* chat = initChat(sockfd);
+    strcpy(chat->name, "Anonymous");
+    pthread_mutex_lock(&chatter->lock);
+    LinkedList_addFirst(chatter->chats, (void*)chat);
+    // Step 2: Start a thread for a loop that receives data
+    struct ReceiveData* param = (struct ReceiveData*)malloc(sizeof(struct ReceiveData));
+    param->chat = chat;
+    param->chatter = chatter;
+    pthread_t receiveThread;
+    int res = pthread_create(&receiveThread, NULL, receiveLoop, (void*)param);
+    if (res != 0) {
+        // Print out error information
+        char* fmt = "Error %i opening new connection";
+        char* error = (char*)malloc(strlen(fmt) + 100);
+        sprintf(error, fmt, errno);
+        printErrorGUI(chatter->gui, error);
+        free(error);
+        // Remove dynamically allocated stuff
+        LinkedList_removeFirst(chatter->chats);
+        destroyChat(chat);
+    }
+    else if (chatter->chats->head->next == NULL) {
+        // This is the first chat; make it active
+        chatter->activeChat = chat;
+    }
+    pthread_mutex_unlock(&chatter->lock);
+    reprintUsernameWindow(chatter);
+    reprintChatWindow(chatter);
+}
+
+
+
+/**
+ * @brief Establish a chat as a client connecting to an IP/port
+ * 
+ * @param chatter Data about the current chat session
+ * @param IP IP address in human readable form
+ * @param port Port on which to establish connection
+ */
+void connectChat(struct Chatter* chatter, char* IP, char* port) {
+    // Step 1: Get address information for a host
+    struct addrinfo hints;
+    struct addrinfo* node;
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family = AF_UNSPEC; // Use either IPv4 or IPv6
+    hints.ai_socktype = SOCK_STREAM; // Use TCP
+    int ret = getaddrinfo(IP, port, &hints, &node);
+    if (ret != 0) {
+        printErrorGUI(chatter->gui, "Error number getting address info");
+        freeaddrinfo(node);
+        exit(ret);
+    }
+    int sockfd = -1;
+    // Step 1b: Try all possible connection types in the link list
+    // it gives me until I find one that works
+    while (node != NULL) {
+        sockfd = socket(node->ai_family, node->ai_socktype, node->ai_protocol);
+        if (sockfd != -1) {
+            break;
+        }
+        else {
+            node = node->ai_next;
+        }
+    }
+    // Step 1c: Make sure we got a valid socket file descriptor
+    // after going through all of the options
+    if (sockfd == -1) {
+        printErrorGUI(chatter->gui, "Error opening socket");
+        freeaddrinfo(node);
+        exit(errno);
+    }
+    // Step 2: Setup stream on socket and connect
+    ret = connect(sockfd, node->ai_addr, node->ai_addrlen);
+    freeaddrinfo(node);
+    if (ret == -1) {
+        printErrorGUI(chatter->gui, "Error opening socket");
+        exit(errno);
+    }
+    setupNewChat(chatter, sockfd);
+}
+
 /**
  * @brief Continually loop through and accept new connections
  * 
@@ -206,7 +335,7 @@ void* serverLoop(void* pargs) {
         socklen_t len = sizeof(their_addr);
         int sockfd = accept(chatter->serversock, (struct sockaddr*)&their_addr, &len);
         if (sockfd != -1) {
-            // Put an entry 
+            setupNewChat(chatter, sockfd);
         }
     }
 }

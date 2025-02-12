@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <ncurses.h>
+#include <pthread.h>
 #include "linkedlist.h"
 #include "hashmap.h"
 
@@ -14,9 +15,10 @@ struct __attribute__((__packed__))  header_generic {
 struct GUI {
     int W, H; // Width, height of terminal
     int CH; // Chat height
-    WINDOW* chatsWindow;
+    int CW; // Chat width
+    WINDOW* chatWindow;
     WINDOW* inputWindow;
-    WINDOW* convWindow;
+    WINDOW* nameWindow;
 };
 struct GUI* initGUI();
 void destroyGUI(struct GUI* gui);
@@ -25,6 +27,7 @@ void printErrorGUI(struct GUI* gui, char* error);
 
 struct Message {
     int id;
+    time_t timestamp; // Time at which this message was added to the data structure
     char* text;
 };
 void freeMessages(struct LinkedList* messages);
@@ -43,15 +46,16 @@ struct Chatter {
     struct GUI* gui;
     struct LinkedList* chats;
     char myname[65536];
-    int sockactive; // File descriptor for the active chat
+    struct Chat* activeChat; // Linked node for the active chat
     int serversock; // File descriptor for the socket listening for incoming connections
+    pthread_mutex_t lock;
 };
 struct Chatter* initChatter();
 void destroyChatter(struct Chatter* chatter);
+struct Chat* getChatFromName(struct Chatter* chatter, char* name);
 
-
-void reprintUsernameWindow(struct GUI* gui);
-void reprintChatWindow(struct GUI* gui);
+void reprintUsernameWindow(struct Chatter* chatter);
+void reprintChatWindow(struct Chatter* chatter);
 void typeLoop(struct Chatter* chatter);
 
 
