@@ -55,7 +55,7 @@ struct Chatter {
     struct GUI* gui;
     struct LinkedList* chats;
     char myname[65536];
-    struct Chat* activeChat; // Linked node for the active chat
+    struct Chat* visibleChat; // Linked node for the visible chat
     int serversock; // File descriptor for the socket listening for incoming connections
     pthread_mutex_t lock;
 };
@@ -84,7 +84,7 @@ void typeLoop(struct Chatter* chatter);
 int connectChat(struct Chatter* chatter, char* IP, char* port);
 
 /**
- * @brief Send a message in the active chat
+ * @brief Send a message in the visible chat
  * 
  * @param chatter Data about the current chat session
  * @param message 
@@ -92,7 +92,7 @@ int connectChat(struct Chatter* chatter, char* IP, char* port);
 int sendMessage(struct Chatter* chatter, char* message);
 
 /**
- * @brief Delete message in the active chat
+ * @brief Delete message in the visible chat
  * 
  * @param chatter Data about the current chat session
  * @param id ID of message to delete
@@ -100,7 +100,7 @@ int sendMessage(struct Chatter* chatter, char* message);
 int deleteMessage(struct Chatter* chatter, uint16_t id);
 
 /**
- * @brief Send a file in the active chat
+ * @brief Send a file in the visible chat
  * 
  * @param chatter Data about the current chat session
  * @param filename Path to file
@@ -108,7 +108,7 @@ int deleteMessage(struct Chatter* chatter, uint16_t id);
 int sendFile(struct Chatter* chatter, char* filename);
 
 /**
- * @brief Broadcast my name to all active connections
+ * @brief Broadcast my name to all visible connections
  * NOTE: Name is held in chatter->myname
  * 
  * @param chatter Data about the current chat session
@@ -125,7 +125,7 @@ int closeChat(struct Chatter* chatter, char* name);
 
 
 /**
- * @brief Switch the active chat
+ * @brief Switch the visible chat
  * 
  * @param chatter Data about the current chat session
  * @param name Switch chat to be with this person

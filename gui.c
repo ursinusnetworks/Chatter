@@ -183,7 +183,7 @@ void reprintUsernameWindow(struct Chatter* chatter) {
     while (node != NULL && row < gui->CH) {
         struct Chat* chat = (struct Chat*)node->data;
         char special = ' ';
-        if (chat == chatter->activeChat) {
+        if (chat == chatter->visibleChat) {
             special = '*'; // Put an asterix next to the active chat
         }
         mvwprintw(gui->nameWindow, row, 0, "%s%c", chat->name, special);
@@ -210,8 +210,8 @@ void reprintChatWindow(struct Chatter* chatter) {
     pthread_mutex_lock(&chatter->lock);
     struct GUI* gui = chatter->gui;
     wclear(gui->chatWindow);
-    if (chatter->activeChat != NULL) {
-        struct Chat* chat = chatter->activeChat;
+    if (chatter->visibleChat != NULL) {
+        struct Chat* chat = chatter->visibleChat;
         // Print out chats in order of most recent
         int row = gui->CH - 1;
         struct LinkedNode* inNode = chat->messagesIn->head;
