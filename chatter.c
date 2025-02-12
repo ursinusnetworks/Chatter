@@ -34,15 +34,6 @@ struct Chat* initChat(int sockfd) {
     chat->messagesOut = LinkedList_init();
     chat->outCounter = 0;
     chat->sockfd = sockfd;
-    struct Message msgOut, msgIn;
-    msgOut.id = 0;
-    msgOut.text = "Message out";
-    msgOut.timestamp = 0;
-    msgIn.id = 3;
-    msgIn.text = "Message in";
-    msgIn.timestamp = 1;
-    LinkedList_addFirst(chat->messagesIn, &msgIn);
-    LinkedList_addFirst(chat->messagesOut, &msgOut);
     return chat;
 }
 
@@ -114,6 +105,26 @@ struct Chat* getChatFromName(struct Chatter* chatter, char* name) {
     return chat;
 }
 
+/**
+ * @brief Remove a particular chat from the list
+ * 
+ * @param chatter Chatter object
+ * @param chat Chat to remove
+ */
+void removeChat(struct Chatter* chatter, struct Chat* chat) {
+    pthread_mutex_lock(&chatter->lock);
+    LinkedList_remove(chatter->chats, chat);
+    if (chatter->activeChat == chat) {
+        // Bounce to another chat if there is one
+        chatter->activeChat = NULL;
+        if (chatter->chats->head != NULL) {
+            chatter->activeChat = (struct Chat*)chatter->chats->head->data;
+        }
+    }
+    destroyChat(chat);
+    pthread_mutex_unlock(&chatter->lock);
+}
+
 
 ///////////////////////////////////////////////////////////
 //             Chat Session Messages In
@@ -133,7 +144,10 @@ void* receiveLoop(void* pargs) {
     while (1) {
         // Loop until the connection closes
         struct header_generic header;
-        if (recv(chat->sockfd, &header, sizeof(struct header_generic), 0) <= 0) {
+        pthread_mutex_lock(&chatter->lock);
+        int res = recv(chat->sockfd, &header, sizeof(struct header_generic), 0);
+        pthread_mutex_unlock(&chatter->lock);
+        if (res <= 0) {
             break;
         }
         // TODO: Fill this in.  Cast the header as appropriate, and receive
@@ -143,16 +157,7 @@ void* receiveLoop(void* pargs) {
         reprintUsernameWindow(chatter);
         reprintChatWindow(chatter);
     }
-    // Cleanup this connection
-    LinkedList_remove(chatter->chats, chat);
-    if (chatter->activeChat == chat) {
-        // Bounce to another chat if there is one
-        chatter->activeChat = NULL;
-        if (chatter->chats->head != NULL) {
-            chatter->activeChat = (struct Chat*)chatter->chats->head->data;
-        }
-    }
-    destroyChat(chat);
+    removeChat(chatter, chat);
 
     return NULL;
 }
@@ -273,6 +278,7 @@ void setupNewChat(struct Chatter* chatter, int sockfd) {
     param->chatter = chatter;
     pthread_t receiveThread;
     int res = pthread_create(&receiveThread, NULL, receiveLoop, (void*)param);
+    int failed = 0;
     if (res != 0) {
         // Print out error information
         char* fmt = "Error %i opening new connection";
@@ -282,15 +288,20 @@ void setupNewChat(struct Chatter* chatter, int sockfd) {
         free(error);
         // Remove dynamically allocated stuff
         LinkedList_removeFirst(chatter->chats);
-        destroyChat(chat);
+        failed = 1;
     }
     else if (chatter->chats->head->next == NULL) {
         // This is the first chat; make it active
         chatter->activeChat = chat;
     }
     pthread_mutex_unlock(&chatter->lock);
-    reprintUsernameWindow(chatter);
-    reprintChatWindow(chatter);
+    if (failed == 1) {
+        destroyChat(chat);
+    }
+    else {
+        reprintUsernameWindow(chatter);
+        reprintChatWindow(chatter);
+    }
 }
 
 
@@ -311,9 +322,9 @@ void connectChat(struct Chatter* chatter, char* IP, char* port) {
     hints.ai_socktype = SOCK_STREAM; // Use TCP
     int ret = getaddrinfo(IP, port, &hints, &node);
     if (ret != 0) {
-        printErrorGUI(chatter->gui, "Error number getting address info");
+        printErrorGUI(chatter->gui, "Error getting address info");
         freeaddrinfo(node);
-        exit(ret);
+        return;
     }
     int sockfd = -1;
     // Step 1b: Try all possible connection types in the link list
@@ -332,14 +343,14 @@ void connectChat(struct Chatter* chatter, char* IP, char* port) {
     if (sockfd == -1) {
         printErrorGUI(chatter->gui, "Error opening socket");
         freeaddrinfo(node);
-        exit(errno);
+        return;
     }
     // Step 2: Setup stream on socket and connect
     ret = connect(sockfd, node->ai_addr, node->ai_addrlen);
     freeaddrinfo(node);
     if (ret == -1) {
         printErrorGUI(chatter->gui, "Error opening socket");
-        exit(errno);
+        return;
     }
     setupNewChat(chatter, sockfd);
 }
