@@ -65,7 +65,13 @@ int parseInput(struct Chatter* chatter, char* input) {
         char IP[40];
         char port[6];
         sscanf(input, "connect %39s %5s", IP, port);
-        success = connectChat(chatter, IP, port);
+        if (strstr(IP, ".") == NULL) {
+            success = 0;
+            printErrorGUI(gui, "Please put a dot in your IP address!");
+        }
+        else {
+            success = connectChat(chatter, IP, port);
+        }
     }
     else if (strncmp(input, "myname", strlen("myname")) == 0) {
         // Change my name

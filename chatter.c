@@ -49,7 +49,7 @@ void freeMessages(struct LinkedList* messages) {
     struct LinkedNode* node = messages->head;
     while (node != NULL) {
         struct Message* message = (struct Message*)node->data;
-        free(message->text);
+        free(message->text); // This assumes the message text has been dynamically allocated
         free(message);
         node = node->next;
     }
@@ -131,7 +131,7 @@ void removeChat(struct Chatter* chatter, struct Chat* chat) {
 ///////////////////////////////////////////////////////////
 
 /**
- * @brief Continually loop and receive info
+ * @brief Continually loop and receive info on a particular chat
  * 
  * @param pargs 
  * @return void* 
@@ -151,6 +151,9 @@ void* receiveLoop(void* pargs) {
         // TODO: Fill this in.  Cast the header as appropriate, and receive
         // the rest of the data.  
         // Be sure to lock variables as appropriate for thread safety
+        if (header.magic == INDICATE_NAME) {
+            // So on and so forth...
+        }
 
         reprintUsernameWindow(chatter);
         reprintChatWindow(chatter);
@@ -174,9 +177,25 @@ void* receiveLoop(void* pargs) {
  * @param message 
  */
 int sendMessage(struct Chatter* chatter, char* message) {
+    // We're about to touch variables that are shared between
+    // threads
+    pthread_mutex_lock(&chatter->lock);
     int success = 1;
-    // TODO: Fill this in
+    if (chatter->activeChat == NULL ){
+        success = 0;
+    }
+    else {
+        // TODO: Fill this in
+        // Step 1: Make a copy of message string (remember to free later)
+        // Step 2: Dynamically allocate Message struct with ID and timestamp
+        // Step 3: Send an appropriate segment over the socket
 
+        chatter->activeChat->outCounter++;
+    }
+
+
+
+    pthread_mutex_unlock(&chatter->lock);
     return success;
 }
 

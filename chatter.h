@@ -7,9 +7,18 @@
 #include "linkedlist.h"
 #include "hashmap.h"
 
+enum Magic {
+    INDICATE_NAME = 0,
+    SEND_MESSAGE = 1,
+    DELETE_MESSAGE = 2,
+    SEND_FILE = 3,
+    END_CHAT = 4
+};
+
 struct __attribute__((__packed__))  header_generic {
     uint8_t magic;
-    char pad[6];
+    uint16_t shortInt; // Because @bonelesspi said so
+    uint32_t longInt; // Because @thekacefiles said it was too archaic
 };
 
 struct GUI {
@@ -26,7 +35,7 @@ void printErrorGUI(struct GUI* gui, char* error);
 
 
 struct Message {
-    int id;
+    uint16_t id;
     time_t timestamp; // Time at which this message was added to the data structure
     char* text;
 };
