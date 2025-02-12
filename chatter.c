@@ -34,6 +34,15 @@ struct Chat* initChat(int sockfd) {
     chat->messagesOut = LinkedList_init();
     chat->outCounter = 0;
     chat->sockfd = sockfd;
+    struct Message msgOut, msgIn;
+    msgOut.id = 0;
+    msgOut.text = "Message out";
+    msgOut.timestamp = 0;
+    msgIn.id = 3;
+    msgIn.text = "Message in";
+    msgIn.timestamp = 1;
+    LinkedList_addFirst(chat->messagesIn, &msgIn);
+    LinkedList_addFirst(chat->messagesOut, &msgOut);
     return chat;
 }
 
@@ -122,8 +131,9 @@ void* receiveLoop(void* pargs) {
     struct Chatter* chatter = param->chatter;
     free(param);
     while (1) {
+        // Loop until the connection closes
         struct header_generic header;
-        if (recv(chat->sockfd, &header, sizeof(struct header_generic), 0) == 0) {
+        if (recv(chat->sockfd, &header, sizeof(struct header_generic), 0) <= 0) {
             break;
         }
         // TODO: Fill this in.  Cast the header as appropriate, and receive
@@ -133,6 +143,17 @@ void* receiveLoop(void* pargs) {
         reprintUsernameWindow(chatter);
         reprintChatWindow(chatter);
     }
+    // Cleanup this connection
+    LinkedList_remove(chatter->chats, chat);
+    if (chatter->activeChat == chat) {
+        // Bounce to another chat if there is one
+        chatter->activeChat = NULL;
+        if (chatter->chats->head != NULL) {
+            chatter->activeChat = (struct Chat*)chatter->chats->head->data;
+        }
+    }
+    destroyChat(chat);
+
     return NULL;
 }
 

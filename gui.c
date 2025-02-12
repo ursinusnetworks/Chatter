@@ -205,7 +205,7 @@ void reprintChatWindow(struct Chatter* chatter) {
         // Print out chats in order of most recent
         int row = gui->CH - 1;
         struct LinkedNode* inNode = chat->messagesIn->head;
-        struct LinkedNode* outNode = chat->messagesIn->head;
+        struct LinkedNode* outNode = chat->messagesOut->head;
         while (row >= 0 && (inNode != NULL || outNode != NULL)) {
             int printOut = 0;
             if (inNode == NULL) {
