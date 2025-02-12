@@ -57,6 +57,7 @@ void printErrorGUI(struct GUI* gui, char* error) {
  */
 int parseInput(struct Chatter* chatter, char* input) {
     int finished = 0;
+    int success = 0;
     struct GUI* gui = chatter->gui;
     // "connect <IP>"
     if (strncmp(input, "connect", strlen("connect")) == 0) {
@@ -64,41 +65,41 @@ int parseInput(struct Chatter* chatter, char* input) {
         char IP[40];
         char port[6];
         sscanf(input, "connect %39s %5s", IP, port);
-        connectChat(chatter, IP, port);
+        success = connectChat(chatter, IP, port);
     }
     else if (strncmp(input, "myname", strlen("myname")) == 0) {
         // Change my name
         sscanf(input, "myname %65535s", chatter->myname);
-        broadcastMyName(chatter);
+        success = broadcastMyName(chatter);
     }
     else if (strncmp(input, "sendfile", strlen("sendfile")) == 0) {
         // Send the following file message in the active conversation
         char filename[65536];
         sscanf(input, "sendfile %s", filename);
-        sendFile(chatter, filename);
+        success = sendFile(chatter, filename);
     }
     else if (strncmp(input, "send", strlen("send")) == 0) {
         // Send the following text message in the active conversation
         char* message = input + strlen("send") + 1;
-        sendMessage(chatter, message);
+        success = sendMessage(chatter, message);
     }
     else if (strncmp(input, "talkto", strlen("talkto")) == 0) {
         // Switch the active chat window to someone else
         char name[65536];
         sscanf(input, "talkto %65535s", name);
-        switchTo(chatter, name);
+        success = switchTo(chatter, name);
     }
     else if (strncmp(input, "delete", strlen("delete")) == 0) {
         // Delete the message with this id in the active conversation
         uint16_t id;
         sscanf(input, "delete %hu", &id);
-        deleteMessage(chatter, id);
+        success = deleteMessage(chatter, id);
     }
     else if (strncmp(input, "close", strlen("close")) == 0) {
         // Close the connection with someone
         char name[65536];
         sscanf(input, "close %65535s", name);
-        closeChat(chatter, name);
+        success = closeChat(chatter, name);
     }
     else if (strncmp(input, "exit", strlen("exit")) == 0) {
         finished = 1;
@@ -113,8 +114,11 @@ int parseInput(struct Chatter* chatter, char* input) {
         free(error);
         return finished;
     }
-    reprintUsernameWindow(chatter);
-    reprintChatWindow(chatter);
+    if (success == 1) {
+        reprintUsernameWindow(chatter);
+        reprintChatWindow(chatter);
+    }
+
     return finished;
 }
 

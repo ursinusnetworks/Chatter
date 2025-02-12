@@ -72,7 +72,7 @@ void typeLoop(struct Chatter* chatter);
  * @param IP IP address in human readable form
  * @param port Port on which to establish connection
  */
-void connectChat(struct Chatter* chatter, char* IP, char* port);
+int connectChat(struct Chatter* chatter, char* IP, char* port);
 
 /**
  * @brief Send a message in the active chat
@@ -80,7 +80,7 @@ void connectChat(struct Chatter* chatter, char* IP, char* port);
  * @param chatter Data about the current chat session
  * @param message 
  */
-void sendMessage(struct Chatter* chatter, char* message);
+int sendMessage(struct Chatter* chatter, char* message);
 
 /**
  * @brief Delete message in the active chat
@@ -88,7 +88,7 @@ void sendMessage(struct Chatter* chatter, char* message);
  * @param chatter Data about the current chat session
  * @param id ID of message to delete
  */
-void deleteMessage(struct Chatter* chatter, uint16_t id);
+int deleteMessage(struct Chatter* chatter, uint16_t id);
 
 /**
  * @brief Send a file in the active chat
@@ -96,7 +96,7 @@ void deleteMessage(struct Chatter* chatter, uint16_t id);
  * @param chatter Data about the current chat session
  * @param filename Path to file
  */
-void sendFile(struct Chatter* chatter, char* filename);
+int sendFile(struct Chatter* chatter, char* filename);
 
 /**
  * @brief Broadcast my name to all active connections
@@ -104,7 +104,7 @@ void sendFile(struct Chatter* chatter, char* filename);
  * 
  * @param chatter Data about the current chat session
  */
-void broadcastMyName(struct Chatter* chatter);
+int broadcastMyName(struct Chatter* chatter);
 
 /**
  * @brief Close chat with someone
@@ -112,7 +112,7 @@ void broadcastMyName(struct Chatter* chatter);
  * @param chatter Data about the current chat session
  * @param name Close connection with this person
  */
-void closeChat(struct Chatter* chatter, char* name);
+int closeChat(struct Chatter* chatter, char* name);
 
 
 /**
@@ -121,7 +121,7 @@ void closeChat(struct Chatter* chatter, char* name);
  * @param chatter Data about the current chat session
  * @param name Switch chat to be with this person
  */
-void switchTo(struct Chatter* chatter, char* name);
+int switchTo(struct Chatter* chatter, char* name);
 
 
 
