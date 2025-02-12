@@ -56,8 +56,8 @@ void printErrorGUI(struct GUI* gui, char* error) {
  * @param input String that the user just inputted
  */
 int parseInput(struct Chatter* chatter, char* input) {
-    int finished = 0;
-    int success = 0;
+    int finishedStatus = KEEP_GOING;
+    int status = 0;
     struct GUI* gui = chatter->gui;
     // "connect <IP>"
     if (strncmp(input, "connect", strlen("connect")) == 0) {
@@ -66,49 +66,49 @@ int parseInput(struct Chatter* chatter, char* input) {
         char port[6];
         sscanf(input, "connect %39s %5s", IP, port);
         if (strstr(IP, ".") == NULL) {
-            success = 0;
+            status = IP_FORMAT_ERROR;
             printErrorGUI(gui, "Please put a dot in your IP address!");
         }
         else {
-            success = connectChat(chatter, IP, port);
+            status = connectChat(chatter, IP, port);
         }
     }
     else if (strncmp(input, "myname", strlen("myname")) == 0) {
         // Change my name
         sscanf(input, "myname %65535s", chatter->myname);
-        success = broadcastMyName(chatter);
+        status = broadcastMyName(chatter);
     }
     else if (strncmp(input, "sendfile", strlen("sendfile")) == 0) {
         // Send the following file message in the active conversation
         char filename[65536];
         sscanf(input, "sendfile %s", filename);
-        success = sendFile(chatter, filename);
+        status = sendFile(chatter, filename);
     }
     else if (strncmp(input, "send", strlen("send")) == 0) {
         // Send the following text message in the active conversation
         char* message = input + strlen("send") + 1;
-        success = sendMessage(chatter, message);
+        status = sendMessage(chatter, message);
     }
     else if (strncmp(input, "talkto", strlen("talkto")) == 0) {
         // Switch the active chat window to someone else
         char name[65536];
         sscanf(input, "talkto %65535s", name);
-        success = switchTo(chatter, name);
+        status = switchTo(chatter, name);
     }
     else if (strncmp(input, "delete", strlen("delete")) == 0) {
         // Delete the message with this id in the active conversation
         uint16_t id;
         sscanf(input, "delete %hu", &id);
-        success = deleteMessage(chatter, id);
+        status = deleteMessage(chatter, id);
     }
     else if (strncmp(input, "close", strlen("close")) == 0) {
         // Close the connection with someone
         char name[65536];
         sscanf(input, "close %65535s", name);
-        success = closeChat(chatter, name);
+        status = closeChat(chatter, name);
     }
     else if (strncmp(input, "exit", strlen("exit")) == 0) {
-        finished = 1;
+        finishedStatus = READY_TO_EXIT;
     }
     else {
         char* fmt = "Unrecognized command %s;  (use connect, myname, send, sendfile, delete, close, talkto, exit)";
@@ -118,21 +118,21 @@ int parseInput(struct Chatter* chatter, char* input) {
         sprintf(error, fmt, command);
         printErrorGUI(gui, error);
         free(error);
-        return finished;
+        return finishedStatus;
     }
-    if (success == 1) {
+    if (status == STATUS_SUCCESS) {
         reprintUsernameWindow(chatter);
         reprintChatWindow(chatter);
     }
 
-    return finished;
+    return finishedStatus;
 }
 
 void typeLoop(struct Chatter* chatter) {
     struct GUI* gui = chatter->gui;
     ArrayListBuf buf;
-    int finished = 0;
-    while (finished == 0) {
+    int finishedStatus = KEEP_GOING;
+    while (finishedStatus == KEEP_GOING) {
         wclear(gui->inputWindow);
         // Input loop
         ArrayListBuf_init(&buf);
@@ -164,7 +164,7 @@ void typeLoop(struct Chatter* chatter) {
         while (ch != '\n');
         ArrayListBuf_push(&buf, &NULLTERM, 1);
         char* input = buf.buff;
-        finished = parseInput(chatter, input);
+        finishedStatus = parseInput(chatter, input);
         ArrayListBuf_free(&buf);
     }
 }

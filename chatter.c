@@ -180,9 +180,9 @@ int sendMessage(struct Chatter* chatter, char* message) {
     // We're about to touch variables that are shared between
     // threads
     pthread_mutex_lock(&chatter->lock);
-    int success = 1;
+    int status = STATUS_SUCCESS;
     if (chatter->visibleChat == NULL ){
-        success = 0;
+        status = FAILURE_GENERIC;
     }
     else {
         // TODO: Fill this in
@@ -196,7 +196,7 @@ int sendMessage(struct Chatter* chatter, char* message) {
 
 
     pthread_mutex_unlock(&chatter->lock);
-    return success;
+    return status;
 }
 
 /**
@@ -206,10 +206,10 @@ int sendMessage(struct Chatter* chatter, char* message) {
  * @param id ID of message to delete
  */
 int deleteMessage(struct Chatter* chatter, uint16_t id) {
-    int success = 1;
+    int status = STATUS_SUCCESS;
     // TODO: Fill this in
 
-    return success;
+    return status;
 }
 
 /**
@@ -219,10 +219,10 @@ int deleteMessage(struct Chatter* chatter, uint16_t id) {
  * @param filename Path to file
  */
 int sendFile(struct Chatter* chatter, char* filename) {
-    int success = 1;
+    int status = STATUS_SUCCESS;
     // TODO: Fill this in
 
-    return success;
+    return status;
 }
 
 /**
@@ -232,10 +232,10 @@ int sendFile(struct Chatter* chatter, char* filename) {
  * @param chatter Data about the current chat session
  */
 int broadcastMyName(struct Chatter* chatter) {
-    int success = 1;
+    int status = STATUS_SUCCESS;
     // TODO: Fill this in
 
-    return success;
+    return status;
 }
 
 /**
@@ -245,10 +245,10 @@ int broadcastMyName(struct Chatter* chatter) {
  * @param name Close connection with this person
  */
 int closeChat(struct Chatter* chatter, char* name) {
-    int success = 1;
+    int status = STATUS_SUCCESS;
     // TODO: Fill this in
 
-    return success;
+    return status;
 }
 
 
@@ -259,17 +259,17 @@ int closeChat(struct Chatter* chatter, char* name) {
  * @param name Switch chat to be with this person
  */
 int switchTo(struct Chatter* chatter, char* name) {
-    int success = 1;
+    int status = STATUS_SUCCESS;
     struct Chat* chat = getChatFromName(chatter, name);
     pthread_mutex_lock(&chatter->lock);
     if (chat == NULL) {
-        success = 0;
+        status = CHAT_DOESNT_EXIST;
     }
     else {
         chatter->visibleChat = chat;
     }
     pthread_mutex_unlock(&chatter->lock);
-    return success;
+    return status;
 }
 
 
