@@ -315,7 +315,7 @@ int setupNewChat(struct Chatter* chatter, int sockfd) {
     param->chatter = chatter;
     pthread_t receiveThread;
     int res = pthread_create(&receiveThread, NULL, receiveLoop, (void*)param);
-    int success = 1;
+    int status = STATUS_SUCCESS;
     if (res != 0) {
         // Print out error information
         char* fmt = "Error %i opening new connection";
@@ -325,17 +325,17 @@ int setupNewChat(struct Chatter* chatter, int sockfd) {
         free(error);
         // Remove dynamically allocated stuff
         LinkedList_removeFirst(chatter->chats);
-        success = 0;
+        status = ERR_THREADCREATE;
     }
     else if (chatter->chats->head->next == NULL) {
         // This is the first chat; make it visible
         chatter->visibleChat = chat;
     }
     pthread_mutex_unlock(&chatter->lock);
-    if (success == 0) {
+    if (status != STATUS_SUCCESS) {
         destroyChat(chat);
     }
-    return success;
+    return status;
 }
 
 
@@ -358,7 +358,7 @@ int connectChat(struct Chatter* chatter, char* IP, char* port) {
     if (ret != 0) {
         printErrorGUI(chatter->gui, "Error getting address info");
         freeaddrinfo(node);
-        return 0;
+        return ERR_GETADDRINFO;
     }
     int sockfd = -1;
     // Step 1b: Try all possible connection types in the link list
@@ -377,14 +377,17 @@ int connectChat(struct Chatter* chatter, char* IP, char* port) {
     if (sockfd == -1) {
         printErrorGUI(chatter->gui, "Error opening socket");
         freeaddrinfo(node);
-        return 0;
+        return ERR_OPENSOCKET;
     }
     // Step 2: Setup stream on socket and connect
+    struct timeval timeout;
+    timeout.tv_usec = 5;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     ret = connect(sockfd, node->ai_addr, node->ai_addrlen);
     freeaddrinfo(node);
     if (ret == -1) {
         printErrorGUI(chatter->gui, "Error opening socket");
-        return 0;
+        return ERR_OPENSOCKET;
     }
     return setupNewChat(chatter, sockfd);
 }
@@ -402,7 +405,7 @@ void* serverLoop(void* pargs) {
         int sockfd = accept(chatter->serversock, (struct sockaddr*)&their_addr, &len);
         if (sockfd != -1) {
             int result = setupNewChat(chatter, sockfd);
-            if (result == 0) {
+            if (result != STATUS_SUCCESS) {
                 printErrorGUI(chatter->gui, "Error receiving new connection");
             }
             else {

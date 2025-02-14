@@ -13,7 +13,10 @@ enum ChatStatusCodes {
     IP_FORMAT_ERROR = 2,
     KEEP_GOING = 3,
     READY_TO_EXIT = 4,
-    CHAT_DOESNT_EXIST = 5
+    CHAT_DOESNT_EXIST = 5,
+    ERR_GETADDRINFO = 6,
+    ERR_OPENSOCKET = 7,
+    ERR_THREADCREATE = 8
 };
 
 enum Magic {
