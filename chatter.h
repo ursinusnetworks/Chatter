@@ -61,7 +61,6 @@ struct Chat {
     int outCounter; // How many messages sent out on this chat
     struct LinkedList* messagesIn;
     struct LinkedList* messagesOut;
-    pthread_t refreshGUIThread;
 };
 struct Chat* initChat(int sockfd);
 void destroyChat(struct Chat* chat);
@@ -74,6 +73,7 @@ struct Chatter {
     struct Chat* visibleChat; // Linked node for the visible chat
     int serversock; // File descriptor for the socket listening for incoming connections
     pthread_mutex_t lock;
+    pthread_t refreshGUIThread;
 };
 struct Chatter* initChatter();
 void destroyChatter(struct Chatter* chatter);

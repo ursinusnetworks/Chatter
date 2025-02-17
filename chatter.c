@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <netinet/tcp.h>
 #include <time.h>
 
 #include "linkedlist.h"
@@ -34,10 +35,6 @@ struct Chat* initChat(int sockfd) {
     chat->messagesOut = LinkedList_init();
     chat->outCounter = 0;
     chat->sockfd = sockfd;
-    int res = pthread_create(&chat->refreshGUIThread, NULL, refreshGUILoop, (void*)chat);
-    if (res != 0) {
-        fprintf(stderr, "Error setting up refresh daemon for GUI\n");
-    }
     return chat;
 }
 
@@ -67,6 +64,13 @@ struct Chatter* initChatter() {
     chatter->chats = LinkedList_init();
     chatter->visibleChat = NULL;
     pthread_mutex_init(&chatter->lock, NULL);
+    /////////////////////////////////////////
+    // Refresh the GUI thread every so often
+    int res = pthread_create(&chatter->refreshGUIThread, NULL, refreshGUILoop, (void*)chatter);
+    if (res != 0) {
+        fprintf(stderr, "Error setting up refresh daemon for GUI\n");
+    }
+    /////////////////////////////////////////
     return chatter;
 }
 
@@ -159,6 +163,7 @@ void* receiveLoop(void* pargs) {
             // So on and so forth...
             uint16_t len = ntohs(header.shortInt);
             int res = recv(chat->sockfd, chat->name, len, 0);
+            chat->name[len] = '\0';
             // TODO: Error checking
         }
         reprintUsernameWindow(chatter);
@@ -330,6 +335,9 @@ void socketErrorAndExit(struct Chatter* chatter, char* fmt) {
  * @param sockfd A socket that's already been connected to a stream
  */
 int setupNewChat(struct Chatter* chatter, int sockfd) {
+    // Step 0: Disable Nagle's algorithm on this socket
+    int yes = 1;
+    setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(int));
     // Step 1: Setup a new chat object and add to the list
     struct Chat* chat = initChat(sockfd);
     strcpy(chat->name, "Anonymous");
@@ -406,9 +414,6 @@ int connectChat(struct Chatter* chatter, char* IP, char* port) {
         return ERR_OPENSOCKET;
     }
     // Step 2: Setup stream on socket and connect
-    struct timeval timeout;
-    timeout.tv_usec = 5;
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     ret = connect(sockfd, node->ai_addr, node->ai_addrlen);
     freeaddrinfo(node);
     if (ret == -1) {

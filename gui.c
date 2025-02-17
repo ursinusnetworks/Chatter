@@ -149,13 +149,11 @@ void reprintChatWindow(struct Chatter* chatter) {
 void* refreshGUILoop(void* args) {
     struct Chatter* chatter = (struct Chatter*)args;
     while (1) {
+        sleep(5);
         reprintUsernameWindow(chatter);
         reprintChatWindow(chatter);
-        fprintf(stderr, "Refreshing chat\n");
-        sleep(2);
     }
 }
-
 
 ///////////////////////////////////////////////////////////
 //            Typing / Parsing Methods
