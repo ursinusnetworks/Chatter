@@ -38,8 +38,10 @@ struct GUI {
     int CH; // Chat height
     int CW; // Chat width
     WINDOW* chatWindow;
+    pthread_mutex_t chatWindowLock;
     WINDOW* inputWindow;
     WINDOW* nameWindow;
+    pthread_mutex_t nameWindowLock;
 };
 struct GUI* initGUI();
 void destroyGUI(struct GUI* gui);
@@ -59,9 +61,11 @@ struct Chat {
     int outCounter; // How many messages sent out on this chat
     struct LinkedList* messagesIn;
     struct LinkedList* messagesOut;
+    pthread_t refreshGUIThread;
 };
 struct Chat* initChat(int sockfd);
 void destroyChat(struct Chat* chat);
+void* refreshGUILoop(void* args);
 
 struct Chatter {
     struct GUI* gui;
