@@ -25,10 +25,10 @@ struct GUI* initGUI() {
     gui->CW = gui->W - ADDR_WIDTH;
     curs_set(TRUE);
     gui->chatWindow = newwin(gui->CH, gui->CW, 0, 0);
-    //pthread_mutex_init(&gui->chatWindowLock, NULL);
+    pthread_mutex_init(&gui->chatWindowLock, NULL);
     gui->inputWindow = newwin(TYPE_SIZE, gui->W, gui->CH, 0);
     gui->nameWindow  = newwin(gui->CH, ADDR_WIDTH, 0, gui->CW);
-    //pthread_mutex_init(&gui->nameWindowLock, NULL);
+    pthread_mutex_init(&gui->nameWindowLock, NULL);
 
     char* s = "Hello!  Chats will go here!";
     mvwprintw(gui->chatWindow, 0, 0, "%s", s); 
@@ -56,17 +56,18 @@ void destroyGUI(struct GUI* gui) {
 ///////////////////////////////////////////////////////////
 
 void printErrorGUI(struct GUI* gui, char* error) {
-    //pthread_mutex_lock(&gui->chatWindowLock);
+    fprintf(stderr, "Printing error: %s\n", error);
+    pthread_mutex_lock(&gui->chatWindowLock);
     wclear(gui->chatWindow);
     mvwprintw(gui->chatWindow, 0, 0, "%s", error);
     wrefresh(gui->chatWindow);
-    //pthread_mutex_unlock(&gui->chatWindowLock);
+    pthread_mutex_unlock(&gui->chatWindowLock);
 }
 
 void reprintUsernameWindow(struct Chatter* chatter) {
     struct GUI* gui = chatter->gui;
     pthread_mutex_lock(&chatter->lock);
-    //pthread_mutex_lock(&gui->nameWindowLock);
+    pthread_mutex_lock(&gui->nameWindowLock);
     wclear(gui->nameWindow);
     struct LinkedNode* node = chatter->chats->head;
     int row = 0;
@@ -81,7 +82,7 @@ void reprintUsernameWindow(struct Chatter* chatter) {
         node = node->next;
     }
     wrefresh(gui->nameWindow);
-    //pthread_mutex_unlock(&gui->nameWindowLock);
+    pthread_mutex_unlock(&gui->nameWindowLock);
     pthread_mutex_unlock(&chatter->lock);
 }
 
@@ -100,7 +101,7 @@ void printLineToChat(struct GUI* gui, char* str, int len, int* row) {
 void reprintChatWindow(struct Chatter* chatter) {
     struct GUI* gui = chatter->gui;
     pthread_mutex_lock(&chatter->lock);
-    //pthread_mutex_lock(&gui->chatWindowLock);
+    pthread_mutex_lock(&gui->chatWindowLock);
     wclear(gui->chatWindow);
     if (chatter->visibleChat != NULL) {
         struct Chat* chat = chatter->visibleChat;
@@ -142,7 +143,7 @@ void reprintChatWindow(struct Chatter* chatter) {
         }
     }
     wrefresh(gui->chatWindow);
-    //pthread_mutex_unlock(&gui->chatWindowLock);
+    pthread_mutex_unlock(&gui->chatWindowLock);
     pthread_mutex_unlock(&chatter->lock);
 }
 

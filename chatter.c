@@ -66,10 +66,10 @@ struct Chatter* initChatter() {
     pthread_mutex_init(&chatter->lock, NULL);
     /////////////////////////////////////////
     // Refresh the GUI thread every so often
-    int res = pthread_create(&chatter->refreshGUIThread, NULL, refreshGUILoop, (void*)chatter);
+    /*int res = pthread_create(&chatter->refreshGUIThread, NULL, refreshGUILoop, (void*)chatter);
     if (res != 0) {
         fprintf(stderr, "Error setting up refresh daemon for GUI\n");
-    }
+    }*/
     /////////////////////////////////////////
     return chatter;
 }
@@ -166,6 +166,20 @@ void* receiveLoop(void* pargs) {
             chat->name[len] = '\0';
             // TODO: Error checking
         }
+        else if (header.magic == SEND_FILE) {
+            uint16_t lenName = ntohs(header.shortInt);
+            uint32_t lenFile = ntohs(header.longInt);
+            char* filename = (char*)malloc(lenName);
+            int res = recv(chat->sockfd, filename, lenName, 0);
+            uint8_t* bytes = (uint8_t*)malloc(lenFile);
+            res = recv(chat->sockfd, bytes, lenFile, 0);
+            FILE* fout = fopen(filename, "wb");
+            fwrite(bytes, lenFile, 1, fout);
+            fprintf(stderr, "Len file: %i bytes\n", lenFile);
+            free(filename);
+            free(bytes);
+            // TODO: Error checking
+        }
         reprintUsernameWindow(chatter);
         reprintChatWindow(chatter);
     }
@@ -231,8 +245,57 @@ int deleteMessage(struct Chatter* chatter, uint16_t id) {
  */
 int sendFile(struct Chatter* chatter, char* filename) {
     int status = STATUS_SUCCESS;
-    // TODO: Fill this in
+    uint16_t lenName = strlen(filename);
 
+    // Step 1: Open file and read contents
+    struct ArrayListBuf buff;
+    ArrayListBuf_init(&buff);
+    FILE* fin = fopen(filename, "rb");
+    if (fin == NULL) {
+        char* fmt = "Error %i opening %s";
+        char* error = (char*)malloc(strlen(fmt) + lenName + 100);
+        sprintf(error, fmt, errno, filename);
+        printErrorGUI(chatter->gui, error);
+        free(error);
+    }
+    else {
+        int ch;
+        do {
+            ch = fgetc(fin);
+            if (ch != EOF) {
+                char uch = (char)ch;
+                ArrayListBuf_push(&buff, &uch, 1);                    
+            }
+        }
+        while(ch != EOF);
+    
+        // Step 2: Send file
+        pthread_mutex_lock(&chatter->lock);
+        struct Chat* chat = chatter->visibleChat;
+        struct header_generic header;
+        header.magic = SEND_FILE;
+        header.shortInt = htons(lenName);
+        header.longInt = htonl(buff.N);
+    
+        // Step 2a: Send header
+        int ret = send(chat->sockfd, &header, sizeof(struct header_generic), 0);
+        if (ret == -1) {
+            status = FAILURE_GENERIC;
+        }
+        // Step 2b: Send filename
+        ret = send(chat->sockfd, filename, lenName, 0);
+        if (ret == -1) {
+            status = FAILURE_GENERIC;
+        }
+        // Step 2c: Send file
+        ret = send(chat->sockfd, buff.buff, buff.N, 0);
+        if (ret == -1) {
+            status = FAILURE_GENERIC;
+        }
+    }
+    
+    pthread_mutex_unlock(&chatter->lock);
+    ArrayListBuf_free(&buff);
     return status;
 }
 
